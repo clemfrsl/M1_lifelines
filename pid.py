@@ -9,11 +9,12 @@ from plotly.subplots import make_subplots
 from lifelines import KaplanMeierFitter, NelsonAalenFitter, WeibullFitter, CoxPHFitter
 from lifelines.statistics import logrank_test, multivariate_logrank_test
 
+import constant
+
 
 @st.cache_data
 def load_data():
-    data_path = './data/mock_data_4.csv'
-    data = pd.read_csv(data_path, sep=';', encoding='utf-8')
+    data = pd.read_csv(constant.data_path, sep=';', encoding='utf-8')
     data = data.rename(columns={'time': 'Time'})
     data = data.drop('Numero_paciente', axis=1)
     raw_data = data.copy()
@@ -21,10 +22,23 @@ def load_data():
     return data, raw_data
 
 def reset_filters():
-    st.session_state.select_sex = 'All'
-    st.session_state.select_anemia = 'All'
+    st.session_state.select_sex = 'TOUT'
+    st.session_state.select_anemia = 'TOUT'
+    st.session_state.select_hipercalcemia = 'TOUT'
     st.session_state.select_ttomm1 = list(data['TtoMM1'].unique())
     st.session_state.select_ttomm2 = list(data['TtoMM2'].unique())
+    check_country()
+    check_erc()
+    check_fish()
+    check_age_range()
+    check_myeloma()
+
+
+def check_erc():
+    st.session_state.select_erc = constant.list_erc
+
+def check_fish():
+    st.session_state.select_fish = constant.list_fish
 
 def check_country():
     st.session_state.select_country = list(data['Country'].unique())
@@ -58,60 +72,135 @@ st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 data, raw_data = load_data()
 n = len(data)
 
-# st.write(data.dtypes)
+#st.write(data.dtypes)
 
 with st.sidebar:
-    st.subheader('Filters selection')
-    filters_text = st.container()
-    sex = st.selectbox('Gender', ('All', 'M', 'F'), key='select_sex')
-    anemia = st.selectbox('Anemia', ('All', 'SI', 'NO'), key='select_anemia')
+    st.subheader('Selection des filtres')
+    filters_text = st.container() 
+    sex = st.selectbox('Genre', ('Tout', 'M', 'F'), key='select_sex')
+    anemia = st.selectbox('Anémie', ('Tout', 'Oui', 'Non'), key='select_anemia')
+    hipercalcemia = st.selectbox("Hypercalcémie", ('Tout', 'Oui', 'Non'), key='select_hipercalcemia')
+    
     select, button = st.columns([8, 2])
     with select:
-        country = st.multiselect('Country', list(data['Country'].unique()), list(data['Country'].unique()), key='select_country')
+        erc = st.multiselect('ERC', constant.list_erc, constant.list_erc, key='select_erc')
     with button:
         st.write('')
         st.write('')
-        st.button('Check all', on_click=check_country, key='check_country')
+        st.button('Tout Cocher', on_click=check_erc, key='check_erc')
+
     select, button = st.columns([8, 2])
     with select:
-        hospital = st.multiselect('Hospital', list(data['Hospital'].unique()), list(data['Hospital'].unique()), key='select_hospital')
+        fish = st.multiselect('FISH', constant.list_fish, constant.list_fish, key='select_fish')
     with button:
         st.write('')
         st.write('')
-        st.button('Check all', on_click=check_hospital, key='check_hospital')
+        st.button('Tout Cocher', on_click=check_fish, key='check_fish')
+    
     select, button = st.columns([8, 2])
     with select:
-        age_range = st.multiselect('Age_range', list(data['Age_range'].unique()), list(data['Age_range'].unique()), key='select_age_range')
+        country = st.multiselect('Pays', list(data['Country'].unique()), list(data['Country'].unique()), key='select_country')
     with button:
         st.write('')
         st.write('')
-        st.button('Check all', on_click=check_age_range, key='check_age_range')
+        st.button('Tout Cocher', on_click=check_country, key='check_country')
+    
+    select, button = st.columns([8, 2])
+    with select:
+        hospital = st.multiselect('Hôpital', list(data['Hospital'].unique()), list(data['Hospital'].unique()), key='select_hospital')
+    with button:
+        st.write('')
+        st.write('')
+        st.button('Tout Cocher', on_click=check_hospital, key='check_hospital')
+    
+    select, button = st.columns([8, 2])
+    with select:
+        age_range = st.multiselect("Tranche d'âge", list(data['Age_range'].unique()), list(data['Age_range'].unique()), key='select_age_range')
+    with button:
+        st.write('')
+        st.write('')
+        st.button('Tout Cocher', on_click=check_age_range, key='check_age_range')
+    
     select, button = st.columns([8, 2])
     with select:
         myeloma = st.multiselect('TypeMyeloma', list(data['TypeMyeloma'].unique()), list(data['TypeMyeloma'].unique()), key='select_myeloma')
     with button:
         st.write('')
         st.write('')
-        st.button('Check all', on_click=check_myeloma, key='check_myeloma')
+        st.button('Tout Cocher', on_click=check_myeloma, key='check_myeloma')
+    
     select, button = st.columns([8, 2])
     with select:
-        ttomm1 = st.multiselect('TtoMM1', list(data['TtoMM1'].unique()), list(data['TtoMM1'].unique()), key='select_ttomm1')
+        ttomm1 = st.multiselect('Traitement du myélome multiple 1', list(data['TtoMM1'].unique()), list(data['TtoMM1'].unique()), key='select_ttomm1')
     with button:
         st.write('')
         st.write('')
-        st.button('Check all', on_click=check_ttomm1, key='check_ttomm1')
+        st.button('Tout Cocher', on_click=check_ttomm1, key='check_ttomm1')
+    
     select, button = st.columns([8, 2])
     with select:
-        ttomm2 = st.multiselect('TtoMM2', list(data['TtoMM2'].unique()), list(data['TtoMM2'].unique()), key='select_ttomm2')
+        ttomm2 = st.multiselect('Traitement du myélome multiple 2', list(data['TtoMM2'].unique()), list(data['TtoMM2'].unique()), key='select_ttomm2')
     with button:
         st.write('')
         st.write('')
-        st.button('Check all', on_click=check_ttomm2, key='check_ttomm2')
+        st.button('Tout Cocher', on_click=check_ttomm2, key='check_ttomm2')
     selected_data = data.copy()
-    if not sex == 'All':
+
+    if not sex == 'Tout':
         selected_data = selected_data[(selected_data['Genero'] == sex)]
-    if not anemia == 'All':
-         selected_data = selected_data[(selected_data['Anemia'] == anemia)]
+
+    if not anemia == 'Tout':
+        if not anemia == "Oui":
+            selected_data = selected_data[(selected_data['Anemia'] == "SI")]
+        if not anemia == "Non":
+            selected_data = selected_data[(selected_data['Anemia'] == "NO")]  
+
+    if not hipercalcemia == 'Tout':
+        if not hipercalcemia == "Oui":
+            selected_data = selected_data[(selected_data['Hipercalcemia'] == "SI")]
+        if not hipercalcemia == "Non":
+            selected_data = selected_data[(selected_data['Hipercalcemia'] == "NO")]  
+
+    erc_leger = "Léger" in erc
+    erc_moderée = "Modérée" in erc
+    erc_sévère = "Sévère" in erc
+    erc_dialisis = "Dialisis" in erc
+    sans_erc = "Sans ERC" in erc
+    selected_data = selected_data[
+        (erc_leger & (selected_data['ERC_Leve'] == "SI")) |
+        (erc_moderée & (selected_data['ERC_moderada'] == "SI")) |
+        (erc_sévère & (selected_data['ERC_severa'] == "SI")) |
+        (erc_dialisis & (selected_data['ERC_dialisis'] == "SI")) |
+        (sans_erc & (
+            (selected_data['ERC_Leve'] == "NO") |
+            (selected_data['ERC_moderada'] == "NO") |
+            (selected_data['ERC_severa'] == "NO") |
+            (selected_data['ERC_dialisis'] == "NO")
+        ))
+    ]
+
+    fish_del17p1 = "del17p1" in fish
+    fish_t_1114 = "t_1114" in fish
+    fish_t414 = "t414" in fish
+    fish_amp1q211 = "amp1q211" in fish
+    fish_autres = "Autres" in fish
+    sans_fish = "Aucun" in fish
+    selected_data = selected_data[
+        (fish_del17p1 & (selected_data['FISHdel17p1'] == "SI")) |
+        (fish_t_1114 & (selected_data['FISHt_1114'] == "SI")) |
+        (fish_amp1q211 & (selected_data['FISHamp1q211'] == "SI")) |
+        (fish_t414 & (selected_data['FISHt414'] == "SI")) |
+        (fish_autres & (selected_data['FISHother'] == "SI")) |
+        (sans_fish & (
+            (selected_data['FISHdel17p1'] == "NO") |
+            (selected_data['FISHt_1114'] == "NO") |
+            (selected_data['FISHamp1q211'] == "NO") |
+            (selected_data['FISHt414'] == "NO") |
+            (selected_data['FISHother'] == "NO")
+        ))
+    ]
+
+
     selected_data = selected_data[(selected_data['TypeMyeloma'].isin(myeloma)) &
                                   (selected_data['Country'].isin(country)) &
                                   (selected_data['Hospital'].isin(hospital)) &
@@ -119,21 +208,20 @@ with st.sidebar:
                                   (selected_data['TtoMM1'].isin(ttomm1)) &
                                   (selected_data['TtoMM2'].isin(ttomm2))]
     n = len(selected_data)
-    filters_text.write(f'Applied filters have selected {n} patients.')
-    st.button('Reset filters', on_click=reset_filters)
+    filters_text.write(f'Les filtres appliqués ont sélectionné {n} patients.')
+    st.button('Réinitialiser', on_click=reset_filters)
 
 st.title('iDecide')
 
-with st.expander('See raw data'):
+with st.expander('Voir les données'):
     st.write(data)
 
-tab_stats, tab_survival, tab_comparison, tab_tests, tab_cox, tab_economic, tab_miss = st.tabs(['Descriptive Statistics', 'Survival Functions',
-                                                                                                'Groups Comparison', 'Tests Comparisons', 'Survival Regression (Cox)',
-                                                                                                'Economic Analysis', 'Missing Data'])
+tab_stats, tab_survival, tab_comparison, tab_tests, tab_cox, tab_economic, tab_miss = st.tabs(constant.menu)
+
 
 with tab_stats:
     if n > 0:
-        chosen_feature = st.selectbox('Variable for which to display descriptive statistics', selected_data.columns)
+        chosen_feature = st.selectbox('Variable pour laquelle afficher des statistiques descriptives', selected_data.columns)
 
         description = selected_data[chosen_feature].describe()
 
@@ -148,7 +236,7 @@ with tab_stats:
                 xaxis_title_text=chosen_feature,
                 yaxis_title_text='Count'
             )
-            st.subheader(f'{chosen_feature} Graphical Representation')
+            st.subheader(f'Représentation Graphique : {chosen_feature} ')
             st.plotly_chart(fig, use_container_width=True)
         else:
             # Histogram of categorical feature
@@ -165,7 +253,7 @@ with tab_stats:
                 xaxis_title_text='Type',
                 yaxis_title_text='Count'
             )
-            st.subheader(f'{chosen_feature} Graphical Representation')
+            st.subheader(f'Représentation Graphique : {chosen_feature} ')
             st.plotly_chart(fig, use_container_width=True)
         
 with tab_survival:
@@ -184,26 +272,26 @@ with tab_survival:
         fig.add_traces([go.Scatter(x=x, y=y_upper, line=dict(shape='hv'), mode='lines',
                                     line_color='rgba(0,0,0,0)', showlegend=False),
                         go.Scatter(x=x, y=y_lower, line=dict(shape='hv'), mode='lines',
-                                    line_color='rgba(0,0,0,0)', name='Confidence Interval', fill='tonexty', fillcolor='rgba(0, 0, 255, 0.2)')])
-        fig.add_traces(go.Scatter(x=x, y=y, line=dict(shape='hv', width=2.5), mode='lines', line_color='rgba(0, 0, 255, 1)', name='KM estimate'))
+                                    line_color='rgba(0,0,0,0)', name='Interval de Confiance', fill='tonexty', fillcolor='rgba(0, 0, 255, 0.2)')])
+        fig.add_traces(go.Scatter(x=x, y=y, line=dict(shape='hv', width=2.5), mode='lines', line_color='rgba(0, 0, 255, 1)', name='KM estimé'))
         fig.update_layout(
-            xaxis_title_text='Dias de Exposicion',
-            yaxis_title_text='Probabilidad de no desmejorar en la enfermedad'
+            xaxis_title_text="Jour d'exposition",
+            yaxis_title_text='Probabilité de ne pas se détériorer dans la maladie'
         )
-        st.subheader('Survival Function of Patients')
-        st.write('Estimation of Probability of Death using Kaplan-Meier')
+        st.subheader("Fonction de Survie des patients")
+        st.write('Estimation de la probabilité de décès à l’aide de Kaplan-Meier')
         # st.write(f'The median time is: {kmf.median_survival_time_}')
         st.plotly_chart(fig, use_container_width=True)
 
-        st.subheader('Kaplan-Meier estimated survival for each of the following days:')
+        st.subheader('Kaplan-Meier a estimé la survie pour chacun des jours suivants:')
         days = [0,5,11,100,200]
         for i, day in enumerate(days):
-            st.write(f'Estimate for {day} days: {kmf.predict(day) * 100: .02f}%')
+            st.write(f'Estimation pour {day} jours : {kmf.predict(day) * 100: .02f}%')
 
-        nb_days = st.number_input('Enter a number of days', min_value=0, value=100, step=1, format='%d')
-        st.write(f'Estimate for {nb_days} days: {kmf.predict(nb_days) * 100: .02f}%')
+        nb_days = st.number_input('Entrer un nombre de jour ', min_value=0, value=100, step=1, format='%d')
+        st.write(f'Estimation pour {nb_days} jours : {kmf.predict(nb_days) * 100: .02f}%')
 
-        st.subheader('Kaplan-Meier Event Table')
+        st.subheader('Table d’activités Kaplan-Meier')
         st.write(kmf.event_table)
 
         st.markdown("""---""")
@@ -220,14 +308,14 @@ with tab_survival:
         fig.add_traces([go.Scatter(x=x, y=y_upper, line=dict(shape='hv'), mode='lines',
                                     line_color='rgba(0,0,0,0)', showlegend=False),
                         go.Scatter(x=x, y=y_lower, line=dict(shape='hv'), mode='lines',
-                                    line_color='rgba(0,0,0,0)', name='Confidence Interval', fill='tonexty', fillcolor='rgba(0, 0, 255, 0.2)')])
-        fig.add_traces(go.Scatter(x=x, y=y, line=dict(shape='hv', width=2.5), mode='lines', line_color='rgba(0, 0, 255, 1)', name='NA estimate'))
+                                    line_color='rgba(0,0,0,0)', name='Interval de Confiance', fill='tonexty', fillcolor='rgba(0, 0, 255, 0.2)')])
+        fig.add_traces(go.Scatter(x=x, y=y, line=dict(shape='hv', width=2.5), mode='lines', line_color='rgba(0, 0, 255, 1)', name='NA estimé'))
         fig.update_layout(
-            xaxis_title_text='Time',
-            yaxis_title_text='Hazard'
+            xaxis_title_text='Temps',
+            yaxis_title_text='Risque'
         )
-        st.subheader('Estimation of cumulative hazard rates using Nelson-Aalen')
-        st.write('The Nelson–Aalen estimator is a non-parametric estimator of the cumulative hazard rate function')
+        st.subheader('Estimation des taux de risque cumulatifs à l’aide de Nelson-Aalen')
+        st.write('L’estimateur de Nelson–Aalen est un estimateur non paramétrique de la fonction du taux de risque cumulatif')
         st.plotly_chart(fig, use_container_width=True)
 
         st.markdown("""---""")
@@ -244,14 +332,14 @@ with tab_survival:
         fig.add_traces([go.Scatter(x=x, y=y_upper, line=dict(shape='hv'), mode='lines',
                                     line_color='rgba(0,0,0,0)', showlegend=False),
                         go.Scatter(x=x, y=y_lower, line=dict(shape='hv'), mode='lines',
-                                    line_color='rgba(0,0,0,0)', name='Confidence Interval', fill='tonexty', fillcolor='rgba(0, 0, 255, 0.2)')])
-        fig.add_traces(go.Scatter(x=x, y=y, line=dict(shape='hv', width=2.5), mode='lines', line_color='rgba(0, 0, 255, 1)', name='Weibull estimate'))
+                                    line_color='rgba(0,0,0,0)', name='Interval de Confiance', fill='tonexty', fillcolor='rgba(0, 0, 255, 0.2)')])
+        fig.add_traces(go.Scatter(x=x, y=y, line=dict(shape='hv', width=2.5), mode='lines', line_color='rgba(0, 0, 255, 1)', name='Weibull estimé'))
         fig.update_layout(
-            xaxis_title_text='Time',
-            yaxis_title_text='Hazard'
+            xaxis_title_text='Temps',
+            yaxis_title_text='Risque'
         )
-        st.subheader('Estimation of cumulative hazard rates using the Weibull model')
-        st.write('The Weibull model for survival data is a parametric model, it has a functional form with parameters that we are fitting the data to')
+        st.subheader('Estimation des taux de risque cumulatifs à l’aide du modèle de Weibull')
+        st.write('Le modèle de Weibull pour les données de survie est un modèle paramétrique, il a une forme fonctionnelle avec des paramètres que nous ajustons les données pour')
         st.plotly_chart(fig, use_container_width=True)
 
         
@@ -262,7 +350,7 @@ with tab_comparison:
                      'SubclasificacionplataformaMM', 'ISSPlataforma1', 'CoadOseo1', 'RespuestaClinica', 'Country', 'Hospital', 'TypeMyeloma',
                      'Age_range', 'Evento', 'TtoMM1', 'TtoMM2']
 
-    surv_comparison_feature = st.selectbox('Variable to use for survival comparison', selected_cols)
+    surv_comparison_feature = st.selectbox('Variable à utiliser pour la comparaison de survie', selected_cols)
     colors = [
         (255,   0,   0),
         (  0, 255,   0),
@@ -279,12 +367,12 @@ with tab_comparison:
         (128, 128, 128),
     ]
 
-    if st.checkbox('Show confidence interval'):
+    if st.checkbox("Montrer l'Interval de Confiance"):
         conf = True
     else:
         conf = False
     
-    if st.checkbox('Display curves on a grid'):
+    if st.checkbox('Afficher les courbes sur une grille'):
         grid = True
     else:
         grid = False
@@ -342,7 +430,7 @@ with tab_comparison:
         )
     # else:
     #     fig.update_layout(title_text='Estimacion de curvas de sobrevida')
-    st.subheader('Kaplan Meier Survival Estimation')
+    st.subheader('Estimation de la survie de Kaplan Meier')
     st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("""---""")
@@ -393,12 +481,12 @@ with tab_comparison:
     if not grid or grid_idcs == 1:
         fig.update_layout(
             # title_text='Nelson Aalen Cumulative hazard',
-            xaxis_title_text='Time',
-            yaxis_title_text='Hazard'
+            xaxis_title_text='Temps',
+            yaxis_title_text='Risque'
         )
     # else:
     #     fig.update_layout(title_text='Nelson Aalen Cumulative hazard')
-    st.subheader('Nelson Aalen Cumulative hazard')
+    st.subheader('Nelson Aalen Risque cumulé')
     st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("""---""")
@@ -449,12 +537,12 @@ with tab_comparison:
     if not grid or grid_idcs == 1:
         fig.update_layout(
             # title_text='Weibull Cumulative hazard',
-            xaxis_title_text='Time',
-            yaxis_title_text='Hazard'
+            xaxis_title_text='Temps',
+            yaxis_title_text='Risque'
         )
     # else:
         # fig.update_layout(title_text='Weibull Cumulative hazard')
-    st.subheader('Weibull Cumulative hazard')
+    st.subheader('Weibull Risque cumulé')
     st.plotly_chart(fig, use_container_width=True)
 
 with tab_tests:
@@ -463,7 +551,7 @@ with tab_tests:
                      'SubclasificacionplataformaMM', 'ISSPlataforma1', 'CoadOseo1', 'RespuestaClinica', 'Age_range', 'Country', 'Hospital', 'TypeMyeloma',
                      'Evento', 'TtoMM1', 'TtoMM2']
 
-    tests_col = st.selectbox('Variable on which to run logrank tests', selected_cols)
+    tests_col = st.selectbox('Variable sur laquelle exécuter les tests logrank', selected_cols)
     test_cat_values = data[tests_col].dropna().unique()
 
     if len(data[tests_col].dropna().unique()) == 2:
@@ -476,10 +564,10 @@ with tab_tests:
             'events': data['Dead'], # Event
         })
         results = multivariate_logrank_test(df['durations'], df['groups'], df['events'])
-    st.subheader('Statistical test of comparison of the survival functions')
-    st.write('Compare the difference between two or more survival functions')
-    st.write('The Mantel-Haenszel test called log-rank test is the most used, and the most performant. Another test can be used: the Wilcoxon test.')
-    st.write('Null hypothesis H0: There is no difference in survival between the study groups')
+    st.subheader('Test statistique de comparaison des fonctions de survie')
+    st.write('Comparer la différence entre deux fonctions de survie ou plus')
+    st.write('Le test de Mantel-Haenszel appelé log-rank est le plus utilisé, et le plus performant. Un autre test peut être utilisé : le test de Wilcoxon.')
+    st.write("Hypothèse nulle H0 : Il n’y a pas de différence de survie entre les groupes d’étude")
     st.write(results)
     
     kmf = KaplanMeierFitter()
@@ -505,45 +593,45 @@ with tab_tests:
         yaxis_title_text='Probabilidad de no desmejorar en la enfermedad'
     )
     st.write('')
-    st.subheader('Kaplan Meier Survival Estimation')
+    st.subheader('Estimation de la survie de Kaplan Meier')
     st.plotly_chart(fig, use_container_width=True)
 
 with tab_cox:
-    cox_variables = st.multiselect('Select covariates', raw_data.columns, ['Anemia', 'Hipercalcemia', 'Country', 'Age'])
+    cox_variables = st.multiselect('Sélectionner des covariables', raw_data.columns, ['Anemia', 'Hipercalcemia', 'Country', 'Age'])
     if cox_variables:
         cph = CoxPHFitter()
         cph.fit(raw_data, duration_col='Time', event_col='Evento', formula=' + '.join(cox_variables))
-        st.subheader('Cox model parameters:')
+        st.subheader('Paramètres du modèle Cox :')
         st.write(cph.params_)
-        st.subheader('p-Values:')
+        st.subheader('Valeurs p :')
         p_values = cph.summary.p
         tmp_df = pd.DataFrame(p_values)
-        tmp_df['Significance'] = np.where(tmp_df['p']<.05, 'Significant impact on survival', 'No significant impact on survival')
+        tmp_df['Significance'] = np.where(tmp_df['p']<.05, 'Incidence importante sur la survie', 'Aucun impact significatif sur la survie')
         st.write(tmp_df)
-        st.subheader('Hazard ratios:')
+        st.subheader('Rapports de risque:')
         ratios = cph.hazard_ratios_
         st.write(ratios)
-        st.write(f'The variable {list(ratios.nlargest(1).index)[0]} has the greatest impact on death')
-        st.subheader('Detailed Results:')
+        st.write(f'La variable {list(ratios.nlargest(1).index)[0]} a le plus grand impact sur la mort')
+        st.subheader('Résultats détaillés :')
         st.write(cph.summary)
 
 with tab_economic:
-    treatment = st.selectbox('Select a TtoMM1 treatment', data['TtoMM1'].unique())
+    treatment = st.selectbox('Selectionner un Traitement du myélome multiple 1 :', data['TtoMM1'].unique())
     treatment_data = data.copy()
     treatment_data = treatment_data[(treatment_data['TtoMM1'] == treatment)]
     remission_prob = treatment_data['Remission'].sum() / len(treatment_data)
-    st.subheader(f'Cost Effectiveness: {treatment_data["Cost"].mean() / remission_prob:.02f}$')
-    st.subheader(f'Burden of Desease: {treatment_data["Cost"].sum():.02f}$')
-    country = st.selectbox('Select a country', data['Country'].unique())
+    st.subheader(f'Rentabilité : {treatment_data["Cost"].mean() / remission_prob:.02f}$')
+    st.subheader(f'Fardeau de la détresse : {treatment_data["Cost"].sum():.02f}$')
+    country = st.selectbox('Selectionner un pays :', data['Country'].unique())
     country_data = data.copy()
     country_data = country_data[(country_data['Country'] == country)]
-    hospital = st.selectbox('Select a hospital', country_data['Hospital'].unique())
+    hospital = st.selectbox('Selectionner un Hôpital :', country_data['Hospital'].unique())
     country_data = country_data[(country_data['Hospital'] == hospital)]
     country_data = country_data[(country_data['TtoMM1'] == treatment)]
-    st.subheader(f'Budget Impact Analysis for treatment in selected country and hospital: {0 if len(country_data) == 0 else country_data["Cost"].sum():.02f}$')
+    st.subheader(f'Analyse d’impact budgétaire pour le traitement dans certains pays et hôpitaux : {0 if len(country_data) == 0 else country_data["Cost"].sum():.02f}$')
 
 with tab_miss:
-    st.subheader('Select columns to impute')
+    st.subheader('Sélectionner les colonnes à imputer')
 
     df_miss_select = pd.DataFrame({'Cols': data.columns, 'Types': np.array(data.dtypes), 'NaNs': np.array(data.isna().sum())})
     df_miss_select['Types'] = list(map(lambda x: x.__str__(), df_miss_select['Types']))
