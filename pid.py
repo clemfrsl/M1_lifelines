@@ -63,8 +63,8 @@ st.set_page_config(layout="wide")
 
 hide_streamlit_style = """
             <style>
-            #MainMenu {visibility: hidden;}
-            footer {visibility: hidden;}
+                #MainMenu {visibility: hidden;}
+                footer {visibility: hidden;}
             </style>
             """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True) 
@@ -123,7 +123,7 @@ with st.sidebar:
     
     select, button = st.columns([8, 2])
     with select:
-        myeloma = st.multiselect('TypeMyeloma', list(data['TypeMyeloma'].unique()), list(data['TypeMyeloma'].unique()), key='select_myeloma')
+        myeloma = st.multiselect('Type de myélome', list(data['TypeMyeloma'].unique()), list(data['TypeMyeloma'].unique()), key='select_myeloma')
     with button:
         st.write('')
         st.write('')
@@ -211,32 +211,36 @@ with st.sidebar:
     filters_text.write(f'Les filtres appliqués ont sélectionné {n} patients.')
     st.button('Réinitialiser', on_click=reset_filters)
 
-st.title('iDecide')
+st.title('Analyse de survie - M1 MIAGE')
 
 with st.expander('Voir les données'):
     st.write(data)
 
-tab_stats, tab_survival, tab_comparison, tab_tests, tab_cox, tab_economic, tab_miss = st.tabs(constant.menu)
+tab_acc, tab_stats, tab_survival, tab_comparison, tab_tests, tab_cox, tab_economic, tab_miss = st.tabs(constant.menu)
 
+with tab_acc:
+    st.write(constant.home)
 
 with tab_stats:
     if n > 0:
-        chosen_feature = st.selectbox('Variable pour laquelle afficher des statistiques descriptives', selected_data.columns)
-
+        chosen_feature_fr = st.selectbox("Sélection d'une variable particulière à étudier", constant.selected_cols_desc_keys)
+        chosen_feature = constant.selected_cols_desc[chosen_feature_fr]
         description = selected_data[chosen_feature].describe()
 
         st.write(description)
+        color_list = constant.colors_desc 
 
         if 'mean' in description.keys():
             # Histogram of continuous feature
             range = description['max'] - description['min']
             fig = px.histogram(x=selected_data[chosen_feature], range_x=(description['min'],description['max']+.05*range))
+            color_discrete_sequence=color_list * len(selected_data[chosen_feature])
             fig.update_traces(xbins=dict(start=description['min'], end=description['max']+.05*range, size=.05*range))
             fig.update_layout(
                 xaxis_title_text=chosen_feature,
-                yaxis_title_text='Count'
+                yaxis_title_text='Quantité'
             )
-            st.subheader(f'Représentation Graphique : {chosen_feature} ')
+            st.subheader(f'Représentation graphique : {chosen_feature_fr} ')
             st.plotly_chart(fig, use_container_width=True)
         else:
             # Histogram of categorical feature
@@ -248,12 +252,13 @@ with tab_stats:
                     y.append(y_temp[val])
                 else:
                     y.append(0)
-            fig = px.bar(x=x, y=y)
+
+            fig = px.bar(x=x, y=y, color=x, color_discrete_sequence=color_list)
             fig.update_layout(
                 xaxis_title_text='Type',
-                yaxis_title_text='Count'
+                yaxis_title_text='Quantité'
             )
-            st.subheader(f'Représentation Graphique : {chosen_feature} ')
+            st.subheader(f'Représentation graphique : {chosen_feature_fr} ')
             st.plotly_chart(fig, use_container_width=True)
         
 with tab_survival:
@@ -272,11 +277,11 @@ with tab_survival:
         fig.add_traces([go.Scatter(x=x, y=y_upper, line=dict(shape='hv'), mode='lines',
                                     line_color='rgba(0,0,0,0)', showlegend=False),
                         go.Scatter(x=x, y=y_lower, line=dict(shape='hv'), mode='lines',
-                                    line_color='rgba(0,0,0,0)', name='Interval de Confiance', fill='tonexty', fillcolor='rgba(0, 0, 255, 0.2)')])
-        fig.add_traces(go.Scatter(x=x, y=y, line=dict(shape='hv', width=2.5), mode='lines', line_color='rgba(0, 0, 255, 1)', name='KM estimé'))
+                                    line_color='rgba(0,0,0,0)', name='Interval de Confiance', fill='tonexty', fillcolor='rgba(206, 131, 255, 0.4)')])
+        fig.add_traces(go.Scatter(x=x, y=y, line=dict(shape='hv', width=2.5), mode='lines', line_color='rgba(171, 23, 216, 1)', name='KM estimé'))
         fig.update_layout(
             xaxis_title_text="Jour d'exposition",
-            yaxis_title_text='Probabilité de ne pas se détériorer dans la maladie'
+            yaxis_title_text="Probabilité que la maladie n'empire pas"
         )
         st.subheader("Fonction de Survie des patients")
         st.write('Estimation de la probabilité de décès à l’aide de Kaplan-Meier')
@@ -308,8 +313,8 @@ with tab_survival:
         fig.add_traces([go.Scatter(x=x, y=y_upper, line=dict(shape='hv'), mode='lines',
                                     line_color='rgba(0,0,0,0)', showlegend=False),
                         go.Scatter(x=x, y=y_lower, line=dict(shape='hv'), mode='lines',
-                                    line_color='rgba(0,0,0,0)', name='Interval de Confiance', fill='tonexty', fillcolor='rgba(0, 0, 255, 0.2)')])
-        fig.add_traces(go.Scatter(x=x, y=y, line=dict(shape='hv', width=2.5), mode='lines', line_color='rgba(0, 0, 255, 1)', name='NA estimé'))
+                                    line_color='rgba(0,0,0,0)', name='Interval de Confiance', fill='tonexty', fillcolor='rgba(206, 131, 255, 0.4)')])
+        fig.add_traces(go.Scatter(x=x, y=y, line=dict(shape='hv', width=2.5), mode='lines', line_color='rgba(171, 23, 216, 1)', name='NA estimé'))
         fig.update_layout(
             xaxis_title_text='Temps',
             yaxis_title_text='Risque'
@@ -332,8 +337,8 @@ with tab_survival:
         fig.add_traces([go.Scatter(x=x, y=y_upper, line=dict(shape='hv'), mode='lines',
                                     line_color='rgba(0,0,0,0)', showlegend=False),
                         go.Scatter(x=x, y=y_lower, line=dict(shape='hv'), mode='lines',
-                                    line_color='rgba(0,0,0,0)', name='Interval de Confiance', fill='tonexty', fillcolor='rgba(0, 0, 255, 0.2)')])
-        fig.add_traces(go.Scatter(x=x, y=y, line=dict(shape='hv', width=2.5), mode='lines', line_color='rgba(0, 0, 255, 1)', name='Weibull estimé'))
+                                    line_color='rgba(0,0,0,0)', name='Interval de Confiance', fill='tonexty', fillcolor='rgba(206, 131, 255, 0.4)')])
+        fig.add_traces(go.Scatter(x=x, y=y, line=dict(shape='hv', width=2.5), mode='lines', line_color='rgba(171, 23, 216, 1)', name='Weibull estimé'))
         fig.update_layout(
             xaxis_title_text='Temps',
             yaxis_title_text='Risque'
@@ -345,27 +350,10 @@ with tab_survival:
         
 with tab_comparison:
     # Select only categorical and handled numerical variables
-    selected_cols = ['Genero', 'Regimenafiliacion', 'Anemia', 'Hipercalcemia', 'ERC_Leve', 'ERC_moderada', 'ERC_severa', 'ERC_dialisis',
-                     'Lesiones_oseas', 'Infecciones_recurrentes', 'Fragilidad', 'FISHdel17p1', 'FISHt_1114', 'FISHt414', 'FISHamp1q211', 'FISHother',
-                     'SubclasificacionplataformaMM', 'ISSPlataforma1', 'CoadOseo1', 'RespuestaClinica', 'Country', 'Hospital', 'TypeMyeloma',
-                     'Age_range', 'Evento', 'TtoMM1', 'TtoMM2']
+    selected_cols = constant.selected_cols_group_keys
 
     surv_comparison_feature = st.selectbox('Variable à utiliser pour la comparaison de survie', selected_cols)
-    colors = [
-        (255,   0,   0),
-        (  0, 255,   0),
-        (  0,   0, 255),
-        (255, 128,   0),
-        (  0, 255, 128),
-        (128,   0, 255),
-        (128, 255,   0),
-        (  0, 128, 255),
-        (255,   0, 128),
-        (255, 255,   0),
-        (  0, 255, 255),
-        (255,   0, 255),
-        (128, 128, 128),
-    ]
+    colors = constant.colors
 
     if st.checkbox("Montrer l'Interval de Confiance"):
         conf = True
@@ -377,7 +365,8 @@ with tab_comparison:
     else:
         grid = False
 
-    cat_values = data[surv_comparison_feature].dropna().unique()
+    data_group = data[constant.selected_cols_group[surv_comparison_feature]]
+    cat_values = data_group.dropna().unique()
     kmf = KaplanMeierFitter()
     data.loc[data.Evento == 0, 'Dead'] = 0
     data.loc[data.Evento == 1, 'Dead'] = 1
@@ -400,7 +389,7 @@ with tab_comparison:
     ## Iterate over all categorical values and plot one survival curve for each
     for i, cat_val in enumerate(cat_values):
         c = colors[i % len(colors)]
-        flag = (data[surv_comparison_feature] == cat_val)
+        flag = (data_group == cat_val)
         kmf.fit(durations=data[flag]['Time'], event_observed=data[flag]['Dead'])
         x = kmf.survival_function_['KM_estimate'].index.values
         y = kmf.survival_function_['KM_estimate']
@@ -456,7 +445,7 @@ with tab_comparison:
     ## Iterate over all categorical values and plot one survival curve for each
     for i, cat_val in enumerate(cat_values):
         c = colors[i % len(colors)]
-        flag = (data[surv_comparison_feature] == cat_val)
+        flag = (data_group == cat_val)
         naf.fit(durations=data[flag]['Time'], event_observed=data[flag]['Dead'])
         x = naf.cumulative_hazard_['NA_estimate'].index.values
         y = naf.cumulative_hazard_['NA_estimate']
@@ -512,7 +501,7 @@ with tab_comparison:
     ## Iterate over all categorical values and plot one survival curve for each
     for i, cat_val in enumerate(cat_values):
         c = colors[i % len(colors)]
-        flag = (data[surv_comparison_feature] == cat_val)
+        flag = (data_group == cat_val)
         wf.fit(durations=data[flag]['Time'].astype(float), event_observed=data[flag]['Dead'].astype(float))
         x = wf.cumulative_hazard_['Weibull_estimate'].index.values
         y = wf.cumulative_hazard_['Weibull_estimate']
@@ -546,21 +535,19 @@ with tab_comparison:
     st.plotly_chart(fig, use_container_width=True)
 
 with tab_tests:
-    selected_cols = ['Genero', 'Regimenafiliacion', 'Anemia', 'Hipercalcemia', 'ERC_Leve', 'ERC_moderada', 'ERC_severa', 'ERC_dialisis',
-                     'Lesiones_oseas', 'Infecciones_recurrentes', 'Fragilidad', 'FISHdel17p1', 'FISHt_1114', 'FISHt414', 'FISHamp1q211', 'FISHother',
-                     'SubclasificacionplataformaMM', 'ISSPlataforma1', 'CoadOseo1', 'RespuestaClinica', 'Age_range', 'Country', 'Hospital', 'TypeMyeloma',
-                     'Evento', 'TtoMM1', 'TtoMM2']
+    selected_cols = constant.selected_cols_tests_keys
 
     tests_col = st.selectbox('Variable sur laquelle exécuter les tests logrank', selected_cols)
-    test_cat_values = data[tests_col].dropna().unique()
+    data_tests = constant.selected_cols_tests[tests_col]
+    test_cat_values = data[data_tests].dropna().unique()
 
-    if len(data[tests_col].dropna().unique()) == 2:
-        flag = (data[tests_col] == test_cat_values[0])
+    if len(data[data_tests].dropna().unique()) == 2:
+        flag = (data[data_tests] == test_cat_values[0])
         results = logrank_test(data[flag]['Time'], data[~flag]['Time'], data[flag]['Dead'], data[~flag]['Dead'], alpha=.99)
     else:
         df = pd.DataFrame({
             'durations': data['Time'], # Time 
-            'groups': data[tests_col], # Modalities of variable could be strings too
+            'groups': data[data_tests], # Modalities of variable could be strings too
             'events': data['Dead'], # Event
         })
         results = multivariate_logrank_test(df['durations'], df['groups'], df['events'])
@@ -575,7 +562,7 @@ with tab_tests:
     ## Iterate over all categorical values and plot one survival curve for each
     for i, cat_val in enumerate(test_cat_values):
         c = colors[i % len(colors)]
-        flag = (data[tests_col] == cat_val)
+        flag = (data[data_tests] == cat_val)
         kmf.fit(durations=data[flag]['Time'], event_observed=data[flag]['Dead'])
         x = kmf.survival_function_['KM_estimate'].index.values
         y = kmf.survival_function_['KM_estimate']
